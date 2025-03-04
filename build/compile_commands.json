@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/josiah/Projects/chip8/build",
+  "command": "/usr/bin/c++  -I/home/josiah/Projects/chip8/./include -g -Wall -Wextra -g -o CMakeFiles/chip.dir/src/main.cpp.o -c /home/josiah/Projects/chip8/src/main.cpp",
+  "file": "/home/josiah/Projects/chip8/src/main.cpp",
+  "output": "CMakeFiles/chip.dir/src/main.cpp.o"
+}
+]
