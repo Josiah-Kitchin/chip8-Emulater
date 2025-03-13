@@ -1,9 +1,18 @@
 
 
-#include <iostream> 
+#include "clock.hpp"
+#include <iostream>
 
 
-int main()
-{
-    std::cout << "Hello world!\n"; 
+
+int main() 
+{ 
+    constexpr int instructions_per_sec = 700; 
+    Clock clock(instructions_per_sec); 
+
+    while (true)
+    {
+        clock.wait_for_cycle(); 
+        std::cout << "Hello world!" << std::endl;
+    }
 }
