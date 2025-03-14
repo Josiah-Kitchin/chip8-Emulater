@@ -4,12 +4,12 @@
 
 Display::Display() { std::fill(m_pixels.begin(), m_pixels.end(), Display::Color::BLACK); }
 
-void Display::write_color(unsigned int x_pixel, unsigned int y_pixel, Display::Color color)
+void Display::write_color(size_t x_pixel, size_t y_pixel, Display::Color color)
 {
-    m_pixels[x_pixel + horizontal_pixels * y_pixel] = color;
+    m_pixels.at(x_pixel + horizontal_pixels * y_pixel) = color;
 }
 
-Display::Color Display::read_color(unsigned int x_pixel, unsigned int y_pixel) const
+Display::Color Display::read_color(size_t x_pixel, size_t y_pixel) const
 {
     return m_pixels[x_pixel + horizontal_pixels * y_pixel];
 }
@@ -17,6 +17,16 @@ Display::Color Display::read_color(unsigned int x_pixel, unsigned int y_pixel) c
 void Display::clear()
 {
     std::fill(m_pixels.begin(), m_pixels.end(), Display::Color::BLACK); 
+}
+
+bool Display::is_white(size_t x_pixel, size_t y_pixel) const
+{
+    return read_color(x_pixel, y_pixel) == Display::Color::WHITE; 
+}
+
+bool Display::is_black(size_t x_pixel, size_t y_pixel) const
+{
+    return read_color(x_pixel, y_pixel) == Display::Color::BLACK; 
 }
 
 

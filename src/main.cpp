@@ -9,15 +9,25 @@
 #include <SFML/Graphics.hpp>
 #include "display_sfml.hpp"
 
+void usage(int argc)
+{
+    if (argc != 2)
+    {
+        std::cout << "Usage: ./chip <program_name>\n";
+        std::exit(EXIT_FAILURE);
+    }
+}
 
-int main() 
+
+int main(int argc, char** argv) 
 { 
+    usage(argc);
 
     /*------------- HARDWARE SETUP -----------*/
-    constexpr int instructions_per_sec = 5;
+    constexpr int instructions_per_sec = 700;
     Clock clock(instructions_per_sec); 
     Memory mem; 
-    load_instructions("ibm.ch8", mem);
+    load_instructions(argv[1], mem);
     Display display; 
     CPU cpu(mem, display);
     /*----------------------------------------*/
@@ -26,8 +36,7 @@ int main()
     constexpr float cell_size = 10.0f; 
     sf::RenderWindow window(sf::VideoMode(display.horizontal_pixels * 10, display.vertical_pixels * 10), "Chip8");
     /*----------------------------------------*/
-
-    while (window.isOpen()) 
+       while (window.isOpen()) 
     {
 
         /* ---------- INSTRUCTION CYCLE -------- */
@@ -43,7 +52,7 @@ int main()
                 window.close();
         }
 
-        display_sfml(window, display, cell_size);
+        display_to_sfml_window(window, display, cell_size);
 
         window.display(); 
         clock.wait_for_cycle(); 

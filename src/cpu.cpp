@@ -1,11 +1,34 @@
 
 #include "cpu.hpp"
-#include <iostream> 
 #include "utils.hpp"
+#include <iostream>
 
-CPU::CPU(Memory &mem, Display& display)
-    : m_program_counter(mem.PROGRAM_START_ADDRESS), m_mem_location(0), m_memory(mem), m_display(display)
+CPU::CPU(Memory &mem, Display &display)
+    : m_program_counter(mem.PROGRAM_START_ADDRESS), m_mem_location(0), m_memory(mem),
+      m_display(display),
+
+      // Functions for different opcodes, can be written here or in another execute_ function 
+      m_opcode_table{
+
+          {Opcode::INVALID_OP, [this](const Instruction& instr) { execute_invalid(instr); }},
+
+          {Opcode::DISPLAY, [this](const Instruction &instr) { execute_draw_sprite(instr); }},
+
+          {Opcode::CLEAR, [this](const Instruction &instr) { m_display.clear(); }},
+
+          {Opcode::JUMP, [this](const Instruction &instr) { m_program_counter = instr.nnn; }},
+
+          {Opcode::MOVE_VALUE,
+           [this](const Instruction &instr) { m_general_registers[instr.x] = instr.nn; }},
+
+          {Opcode::ADD_VALUE,
+           [this](const Instruction &instr) { m_general_registers[instr.x] += instr.nn; }},
+
+          {Opcode::SET_MEM, [this](const Instruction &instr) { m_mem_location = instr.nnn; }},
+      }
+
 {
+
     std::fill(m_general_registers.begin(), m_general_registers.end(), 0);
 }
 
@@ -21,11 +44,12 @@ uint16_t CPU::fetch()
 /* Reads two bytes at pc and combines them to get the
  * instruction
  * Increments pc by 2
+ * 
+ * Terminates the program with success if the program counter goes past the memory size 
  */
 {
     if (m_program_counter >= m_memory.SIZE)
     {
-        std::cout << "Program over" << std::endl; 
         std::exit(EXIT_SUCCESS);
     }
     uint8_t byte1 = m_memory.read(m_program_counter);
@@ -34,104 +58,91 @@ uint16_t CPU::fetch()
 
     uint16_t instruction_bytes = (byte1 << 8) | byte2;
 
-    print_hex(instruction_bytes); // Debug
-
     return instruction_bytes;
 }
 
 void CPU::execute(Instruction instr)
 {
-    switch (instr.op)
-    {
-        case (Opcode::CLEAR): 
-            m_display.clear(); 
-            std::cout << "Clear instruction" << std::endl;
-            break; 
-        case (Opcode::JUMP): 
-            m_program_counter = instr.nnn; 
-            std::cout << "Jump instruction" << std::endl;
-            break; 
-        case (Opcode::MOVE_VALUE): 
-            m_general_registers[instr.x] = instr.nn; 
-            std::cout << "Move instruction" << std::endl; 
-            break; 
-        case (Opcode::ADD_VALUE): 
-            m_general_registers[instr.x] += instr.nn; 
-            std::cout << "Add instruction" << std::endl; 
-            break; 
-        case (Opcode::SET_MEM): 
-            m_mem_location = instr.nnn; 
-            std::cout << "Set mem instruction" << std::endl; 
-            break; 
-        case (Opcode::DISPLAY): 
-        {
-            display(instr);
-            std::cout << "Display Instruction" << std::endl; 
-            break; 
-        }
-        default: 
-            std::cerr << "INVALID INSTRUCTION\n"; 
-            std::exit(EXIT_FAILURE);
-    }
+    auto execute_function = m_opcode_table.at(instr.op);
+    execute_function(instr);
 }
-void CPU::display(const Instruction& instr)
+
+/* ---------------------- EXECUTE METHODS ------------------------- */
+
+void CPU::execute_invalid(const Instruction& instr)
+{
+    std::cerr << "INVALID INSTRUCTION\n";
+    std::exit(EXIT_FAILURE);
+}
+
+void CPU::execute_draw_sprite(const Instruction &instr)
 /*
-    Instruction to display sprite data onto the screen 
+    Instruction to draw sprite data onto the screen
+    - Takes the y and x coordinate from registers and a sprite height value
+    - Reads sprite_height bytes from mem location register
+    - For each bit == 1 in that byte, if the pixel on that screen is white, make it black
+    - Otherwise, make it white (with y coord is current sprite height and x coordinate is
+   current bit)
+
+    If a pixel is changed to black, the flag register is set to 1
 
 */
 {
-    uint8_t rows = instr.n; 
+    uint8_t sprite_height = instr.n;
 
-    m_flag = 0; 
-    uint8_t register_x = instr.x; 
-    uint8_t register_y = instr.y; 
-    for (int row = 0; row < rows; row++)
+    m_flag = 0;
+
+    uint8_t y_coord = m_general_registers[instr.y] % m_display.vertical_pixels;
+    uint8_t x_coord = m_general_registers[instr.x] % m_display.horizontal_pixels;
+
+    for (uint8_t sprite_offset = 0; sprite_offset < sprite_height; sprite_offset++)
     {
         // Read the sprite row (1 byte)
-        uint8_t sprite_byte = m_memory.read(m_mem_location + row);
+        uint8_t sprite_byte = m_memory.read(m_mem_location + sprite_offset);
 
-        uint8_t y_coord = m_general_registers[register_y++];
-        y_coord %= m_display.vertical_pixels + 1; 
+        // Stop if at the bottom of the screen
+        size_t pixel_y_position = y_coord + sprite_offset;
+        if (pixel_y_position >= m_display.vertical_pixels)
+            break;
 
-        // Stop if at the bottom of the screen 
-        if (y_coord == m_display.vertical_pixels)
-            break; 
-
-        for (int i = 0; i < 8; i++)
+        for (int bit_num = 0; bit_num < 8; bit_num++)
         {
-            // Get the x and y coordinates 
-            uint8_t x_coord = m_general_registers[register_x++];
-            x_coord %= m_display.horizontal_pixels + 1; 
-
+            size_t pixel_x_position = x_coord + bit_num;
             // If it is at the right edge of the screen, go to the next row
-            if (x_coord == m_display.horizontal_pixels)
-                break; 
+            if (pixel_x_position >= m_display.horizontal_pixels)
+                break;
 
-            // Each pixel is a bit, start from most significant 
-            uint8_t pixel_bit = sprite_byte & (0x1 << (7 - i)); 
-            if (pixel_bit && m_display.read_color(x_coord, y_coord) == Display::Color::WHITE)
+            // Each pixel is a bit, start from most significant
+            uint8_t pixel_bit = (sprite_byte >> (7 - bit_num)) & 0b1;
+            if (pixel_bit && m_display.is_white(pixel_x_position, pixel_y_position))
             {
-                m_display.write_color(x_coord, y_coord, Display::Color::BLACK);
-                m_flag = 1; 
+                m_display.write_color(pixel_x_position, pixel_y_position, Display::Color::BLACK);
+                m_flag = 1;
             }
-            else if (pixel_bit && m_display.read_color(x_coord, y_coord) == Display::Color::BLACK)
+            else if (pixel_bit && m_display.is_black(pixel_x_position, pixel_y_position))
             {
-                m_display.write_color(x_coord, y_coord, Display::Color::WHITE);
+                m_display.write_color(pixel_x_position, pixel_y_position, Display::Color::WHITE);
             }
         }
     }
 }
 
 
-Instruction CPU::decode(uint16_t instruction_bytes) 
+
+
+
+/* ------------------- DECODE SWITCH STATEMENT --------------------------*/
+
+
+Instruction CPU::decode(uint16_t instruction_bytes)
 /* Converts instruction_bytes into an Instruction */
 {
-    Instruction instruction; 
-    // First nibble dictates what kind of instruction it is 
+    Instruction instruction;
+    // First nibble dictates what kind of instruction it is
     uint8_t opcode_byte = instruction_bytes >> 12;
 
     // Second nibble, used to look up one of 16 registers
-    instruction.x = (instruction_bytes & (0xF << 8)) >> 8; 
+    instruction.x = (instruction_bytes & (0xF << 8)) >> 8;
 
     // Third nibble, used to look up one of 16 registers
     instruction.y = (instruction_bytes & (0xF << 4)) >> 4;
@@ -140,128 +151,127 @@ Instruction CPU::decode(uint16_t instruction_bytes)
     instruction.n = instruction_bytes & 0xF;
 
     // Second byte, an 8 bit immediate number
-    instruction.nn = instruction_bytes & 0xFF; 
+    instruction.nn = instruction_bytes & 0xFF;
 
     // Second, third and fourth nibbles. 12 bit immediate memory address
-    instruction.nnn = instruction_bytes & 0xFFF; 
+    instruction.nnn = instruction_bytes & 0xFFF;
 
-    instruction.op = Opcode::INVALID_OP; 
-    
+    instruction.op = Opcode::INVALID_OP;
+
     switch (opcode_byte)
     {
-        case(0x0): 
-            if (instruction.nnn == 0x0E0)
-                instruction.op = Opcode::CLEAR; 
-            if (instruction.nnn == 0x0EE)
-                instruction.op = Opcode::RET; 
-            break;     
+    case (0x0):
+        if (instruction.nnn == 0x0E0)
+            instruction.op = Opcode::CLEAR;
+        if (instruction.nnn == 0x0EE)
+            instruction.op = Opcode::RET;
+        break;
+    case (0x1):
+        instruction.op = Opcode::JUMP;
+        break;
+    case (0x2):
+        instruction.op = Opcode::CALL;
+        break;
+    case (0x3):
+        instruction.op = Opcode::SKIP_EQUAL_VALUE;
+        break;
+    case (0x4):
+        instruction.op = Opcode::SKIP_NOT_EQUAL_VALUE;
+        break;
+    case (0x5):
+        instruction.op = Opcode::SKIP_EQUAL;
+        break;
+    case (0x6):
+        instruction.op = Opcode::MOVE_VALUE;
+        break;
+    case (0x7):
+        instruction.op = Opcode::ADD_VALUE;
+        break;
+    case (0x8):
+        switch (instruction.n)
+        {
+        case (0x0):
+            instruction.op = Opcode::MOVE;
+            break;
         case (0x1):
-            instruction.op = Opcode::JUMP;
-            break; 
-        case (0x2): 
-            instruction.op = Opcode::CALL; 
-            break; 
-        case (0x3): 
-            instruction.op = Opcode::SKIP_EQUAL_VALUE; 
-            break; 
-        case (0x4): 
-            instruction.op = Opcode::SKIP_NOT_EQUAL_VALUE; 
-            break; 
-        case (0x5): 
-            instruction.op = Opcode::SKIP_EQUAL; 
-            break; 
-        case (0x6): 
-            instruction.op = Opcode::MOVE_VALUE; 
-            break; 
-        case (0x7): 
-            instruction.op = Opcode::ADD_VALUE; 
-            break; 
-        case (0x8): 
-            switch (instruction.n)
-            {
-                case (0x0): 
-                    instruction.op = Opcode::MOVE; 
-                    break; 
-                case (0x1): 
-                    instruction.op = Opcode::OR; 
-                    break; 
-                case (0x2): 
-                    instruction.op = Opcode::AND; 
-                    break; 
-                case (0x3): 
-                    instruction.op = Opcode::XOR; 
-                    break; 
-                case (0x4): 
-                    instruction.op = Opcode::ADD; 
-                    break; 
-                case (0x5): 
-                    instruction.op = Opcode::SUB; 
-                    break; 
-                case (0x6): 
-                    instruction.op = Opcode::SHR; 
-                    break; 
-                case (0x7): 
-                    instruction.op = Opcode::SUBN; 
-                    break; 
-                case (0xE): 
-                    instruction.op = Opcode::SHL; 
-                    break;
-            }
-            break; 
-        case (0x9): 
-            instruction.op = Opcode::SKIP_NOT_EQUAL; 
-            break; 
-        case (0xA): 
-            instruction.op = Opcode::SET_MEM; 
-            break; 
-        case (0xB): 
-            instruction.op = Opcode::JUMP_PLUS; 
-            break; 
-        case (0xC): 
-            instruction.op = Opcode::RANDOM; 
-            break; 
-        case (0xD): 
-            instruction.op = Opcode::DISPLAY;
-            break; 
-        case (0xE): 
-            if (instruction.n == 0xE) 
-                instruction.op = Opcode::SKIP_PRESSED; 
-            else if (instruction.n == 0x1)
-                instruction.op = Opcode::SKIP_NOT_PRESSED; 
-            break; 
-        case (0xF): 
-            switch (instruction.nn) 
-            {
-                case (0x07): 
-                    instruction.op = Opcode::MOVE_DELAY_TIMER; 
-                    break; 
-                case (0x0A): 
-                    instruction.op = Opcode::WAIT_FOR_PRESS; 
-                    break; 
-                case (0x15): 
-                    instruction.op = Opcode::SET_DELAY_TIMER; 
-                    break; 
-                case (0x18): 
-                    instruction.op = Opcode::SET_SOUND_TIMER; 
-                    break; 
-                case (0x1E): 
-                    instruction.op = Opcode::ADD_SET_I;
-                    break; 
-                case (0x29): 
-                    instruction.op = Opcode::SET_I_SPRITE; 
-                    break; 
-                case (0x33): 
-                    instruction.op = Opcode::STORE_BCD; 
-                    break;
-                case (0x55): 
-                    instruction.op = Opcode::STORE_REG_THROUGH; 
-                    break; 
-                case(0x65): 
-                    instruction.op = Opcode::READ_REG_THROUGH; 
-                    break; 
-            }
+            instruction.op = Opcode::OR;
+            break;
+        case (0x2):
+            instruction.op = Opcode::AND;
+            break;
+        case (0x3):
+            instruction.op = Opcode::XOR;
+            break;
+        case (0x4):
+            instruction.op = Opcode::ADD;
+            break;
+        case (0x5):
+            instruction.op = Opcode::SUB;
+            break;
+        case (0x6):
+            instruction.op = Opcode::SHR;
+            break;
+        case (0x7):
+            instruction.op = Opcode::SUBN;
+            break;
+        case (0xE):
+            instruction.op = Opcode::SHL;
+            break;
+        }
+        break;
+    case (0x9):
+        instruction.op = Opcode::SKIP_NOT_EQUAL;
+        break;
+    case (0xA):
+        instruction.op = Opcode::SET_MEM;
+        break;
+    case (0xB):
+        instruction.op = Opcode::JUMP_PLUS;
+        break;
+    case (0xC):
+        instruction.op = Opcode::RANDOM;
+        break;
+    case (0xD):
+        instruction.op = Opcode::DISPLAY;
+        break;
+    case (0xE):
+        if (instruction.n == 0xE)
+            instruction.op = Opcode::SKIP_PRESSED;
+        else if (instruction.n == 0x1)
+            instruction.op = Opcode::SKIP_NOT_PRESSED;
+        break;
+    case (0xF):
+        switch (instruction.nn)
+        {
+        case (0x07):
+            instruction.op = Opcode::MOVE_DELAY_TIMER;
+            break;
+        case (0x0A):
+            instruction.op = Opcode::WAIT_FOR_PRESS;
+            break;
+        case (0x15):
+            instruction.op = Opcode::SET_DELAY_TIMER;
+            break;
+        case (0x18):
+            instruction.op = Opcode::SET_SOUND_TIMER;
+            break;
+        case (0x1E):
+            instruction.op = Opcode::ADD_SET_I;
+            break;
+        case (0x29):
+            instruction.op = Opcode::SET_I_SPRITE;
+            break;
+        case (0x33):
+            instruction.op = Opcode::STORE_BCD;
+            break;
+        case (0x55):
+            instruction.op = Opcode::STORE_REG_THROUGH;
+            break;
+        case (0x65):
+            instruction.op = Opcode::READ_REG_THROUGH;
+            break;
+        }
     }
 
-    return instruction; 
-
+    return instruction;
 }
