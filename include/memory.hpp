@@ -19,9 +19,9 @@ class Memory
 
     static constexpr uint16_t PROGRAM_START_ADDRESS = 0x200;
     static constexpr uint16_t FONT_START_ADDRESS = 0x000;
+    static constexpr std::size_t SIZE = 4096;
 
   private:
     // 4 KB of RAM
-    static constexpr std::size_t SIZE = 4096;
     std::array<uint8_t, SIZE> m_data;
 };

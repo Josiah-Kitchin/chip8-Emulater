@@ -1,8 +1,9 @@
 
 #include "cpu.hpp"
+#include <iostream> 
 
-CPU::CPU(Memory &mem)
-    : m_program_counter(mem.PROGRAM_START_ADDRESS), m_mem_location(0), m_memory(mem)
+CPU::CPU(Memory &mem, Display& display)
+    : m_program_counter(mem.PROGRAM_START_ADDRESS), m_mem_location(0), m_memory(mem), m_display(display)
 {
     std::fill(m_general_registers.begin(), m_general_registers.end(), 0);
 }
@@ -21,6 +22,11 @@ uint16_t CPU::fetch()
  * Increments pc by 2
  */
 {
+    if (m_program_counter >= m_memory.SIZE)
+    {
+        std::cout << "Program over" << std::endl; 
+        std::exit(EXIT_SUCCESS);
+    }
     uint8_t byte1 = m_memory.read(m_program_counter);
     uint8_t byte2 = m_memory.read(m_program_counter + 1);
     m_program_counter += 2;
@@ -29,9 +35,40 @@ uint16_t CPU::fetch()
     return instruction_bytes;
 }
 
+void CPU::execute(Instruction instr)
+{
+    switch (instr.op)
+    {
+        case (Opcode::CLEAR): 
+            m_display.clear(); 
+            break; 
+        case (Opcode::JUMP): 
+            m_program_counter = instr.nnn; 
+            break; 
+        case (Opcode::MOVE_VALUE): 
+            m_general_registers[instr.x] = instr.nn; 
+            break; 
+        case (Opcode::ADD_VALUE): 
+            m_general_registers[instr.x] += instr.nn; 
+            break; 
+        case (Opcode::SET_I_SPRITE): 
+            m_mem_location = instr.nnn; 
+            break; 
+        case (Opcode::DISPLAY): 
+        {
+            // TODO
+            uint8_t x_coord = m_general_registers[instr.x];
+            uint8_t y_coord = m_general_registers[instr.y];
+            uint8_t pixels = instr.n; 
 
 
+        }
 
+        default: 
+            std::cerr << "INVALID INSTRUCTION\n"; 
+            std::exit(EXIT_FAILURE);
+    }
+}
 
 
 

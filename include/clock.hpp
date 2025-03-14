@@ -12,6 +12,7 @@ class Clock
  */
 {
     
+
   public: 
     Clock(int instructions_per_sec); 
     void wait_for_cycle(); 
