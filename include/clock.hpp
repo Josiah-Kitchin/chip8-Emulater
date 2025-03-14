@@ -11,8 +11,6 @@ class Clock
  * Determines the speed of execution for instruction cycle
  */
 {
-    
-
   public: 
     Clock(int instructions_per_sec); 
     void wait_for_cycle(); 
