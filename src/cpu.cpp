@@ -1,6 +1,7 @@
 
 #include "cpu.hpp"
 #include <iostream> 
+#include "utils.hpp"
 
 CPU::CPU(Memory &mem, Display& display)
     : m_program_counter(mem.PROGRAM_START_ADDRESS), m_mem_location(0), m_memory(mem), m_display(display)
@@ -10,9 +11,9 @@ CPU::CPU(Memory &mem, Display& display)
 
 /* ---- Getters and setters ---- */
 
-void CPU::set_register(std::size_t reg_num, uint8_t value) { m_general_registers[reg_num] = value; }
+void CPU::set_register(size_t reg_num, uint8_t value) { m_general_registers[reg_num] = value; }
 
-uint8_t CPU::get_register(std::size_t reg_num) { return m_general_registers[reg_num]; }
+uint8_t CPU::get_register(size_t reg_num) { return m_general_registers[reg_num]; }
 
 /* ---- Instruction Cycle ---- */
 
@@ -32,6 +33,9 @@ uint16_t CPU::fetch()
     m_program_counter += 2;
 
     uint16_t instruction_bytes = (byte1 << 8) | byte2;
+
+    print_hex(instruction_bytes); // Debug
+
     return instruction_bytes;
 }
 
@@ -41,38 +45,85 @@ void CPU::execute(Instruction instr)
     {
         case (Opcode::CLEAR): 
             m_display.clear(); 
+            std::cout << "Clear instruction" << std::endl;
             break; 
         case (Opcode::JUMP): 
             m_program_counter = instr.nnn; 
+            std::cout << "Jump instruction" << std::endl;
             break; 
         case (Opcode::MOVE_VALUE): 
             m_general_registers[instr.x] = instr.nn; 
+            std::cout << "Move instruction" << std::endl; 
             break; 
         case (Opcode::ADD_VALUE): 
             m_general_registers[instr.x] += instr.nn; 
+            std::cout << "Add instruction" << std::endl; 
             break; 
-        case (Opcode::SET_I_SPRITE): 
+        case (Opcode::SET_MEM): 
             m_mem_location = instr.nnn; 
+            std::cout << "Set mem instruction" << std::endl; 
             break; 
         case (Opcode::DISPLAY): 
         {
-            // TODO
-            uint8_t x_coord = m_general_registers[instr.x];
-            uint8_t y_coord = m_general_registers[instr.y];
-            uint8_t pixels = instr.n; 
-
-
+            display(instr);
+            std::cout << "Display Instruction" << std::endl; 
+            break; 
         }
-
         default: 
             std::cerr << "INVALID INSTRUCTION\n"; 
             std::exit(EXIT_FAILURE);
     }
 }
+void CPU::display(const Instruction& instr)
+/*
+    Instruction to display sprite data onto the screen 
+
+*/
+{
+    uint8_t rows = instr.n; 
+
+    m_flag = 0; 
+    uint8_t register_x = instr.x; 
+    uint8_t register_y = instr.y; 
+    for (int row = 0; row < rows; row++)
+    {
+        // Read the sprite row (1 byte)
+        uint8_t sprite_byte = m_memory.read(m_mem_location + row);
+
+        uint8_t y_coord = m_general_registers[register_y++];
+        y_coord %= m_display.vertical_pixels + 1; 
+
+        // Stop if at the bottom of the screen 
+        if (y_coord == m_display.vertical_pixels)
+            break; 
+
+        for (int i = 0; i < 8; i++)
+        {
+            // Get the x and y coordinates 
+            uint8_t x_coord = m_general_registers[register_x++];
+            x_coord %= m_display.horizontal_pixels + 1; 
+
+            // If it is at the right edge of the screen, go to the next row
+            if (x_coord == m_display.horizontal_pixels)
+                break; 
+
+            // Each pixel is a bit, start from most significant 
+            uint8_t pixel_bit = sprite_byte & (0x1 << (7 - i)); 
+            if (pixel_bit && m_display.read_color(x_coord, y_coord) == Display::Color::WHITE)
+            {
+                m_display.write_color(x_coord, y_coord, Display::Color::BLACK);
+                m_flag = 1; 
+            }
+            else if (pixel_bit && m_display.read_color(x_coord, y_coord) == Display::Color::BLACK)
+            {
+                m_display.write_color(x_coord, y_coord, Display::Color::WHITE);
+            }
+        }
+    }
+}
 
 
-
-Instruction CPU::decode(uint16_t instruction_bytes)
+Instruction CPU::decode(uint16_t instruction_bytes) 
 /* Converts instruction_bytes into an Instruction */
 {
     Instruction instruction; 
@@ -99,13 +150,11 @@ Instruction CPU::decode(uint16_t instruction_bytes)
     switch (opcode_byte)
     {
         case(0x0): 
-        {
             if (instruction.nnn == 0x0E0)
                 instruction.op = Opcode::CLEAR; 
             if (instruction.nnn == 0x0EE)
                 instruction.op = Opcode::RET; 
             break;     
-        }
         case (0x1):
             instruction.op = Opcode::JUMP;
             break; 
@@ -128,7 +177,6 @@ Instruction CPU::decode(uint16_t instruction_bytes)
             instruction.op = Opcode::ADD_VALUE; 
             break; 
         case (0x8): 
-        {
             switch (instruction.n)
             {
                 case (0x0): 
@@ -160,7 +208,6 @@ Instruction CPU::decode(uint16_t instruction_bytes)
                     break;
             }
             break; 
-        } 
         case (0x9): 
             instruction.op = Opcode::SKIP_NOT_EQUAL; 
             break; 
@@ -177,16 +224,13 @@ Instruction CPU::decode(uint16_t instruction_bytes)
             instruction.op = Opcode::DISPLAY;
             break; 
         case (0xE): 
-        {
             if (instruction.n == 0xE) 
                 instruction.op = Opcode::SKIP_PRESSED; 
             else if (instruction.n == 0x1)
                 instruction.op = Opcode::SKIP_NOT_PRESSED; 
             break; 
-        }
         case (0xF): 
-        {
-            switch (instruction.nn)
+            switch (instruction.nn) 
             {
                 case (0x07): 
                     instruction.op = Opcode::MOVE_DELAY_TIMER; 
@@ -216,7 +260,6 @@ Instruction CPU::decode(uint16_t instruction_bytes)
                     instruction.op = Opcode::READ_REG_THROUGH; 
                     break; 
             }
-        }
     }
 
     return instruction; 

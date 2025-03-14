@@ -8,7 +8,8 @@ TEST(cpu, fetch)
 {
     // Test the fetching of an instruction from memory
     Memory mem; 
-    CPU cpu(mem);
+    Display display;
+    CPU cpu(mem, display);
 
     mem.write(mem.PROGRAM_START_ADDRESS, 0b11110000);
     mem.write(mem.PROGRAM_START_ADDRESS + 1, 0b00001111);
@@ -20,7 +21,8 @@ TEST(cpu, fetch)
 TEST(cpu, decode_values)
 {
     Memory mem; 
-    CPU cpu(mem);
+    Display display;
+    CPU cpu(mem, display);
 
     Instruction i = cpu.decode(0x1432);
     ASSERT_EQ(0x432, i.nnn);
@@ -37,7 +39,8 @@ TEST(cpu, decode_opcode)
 {
     // Opcode tests
     Memory mem; 
-    CPU cpu(mem);
+    Display display;
+    CPU cpu(mem, display);
 
     Instruction i = cpu.decode(0x00E0);
     ASSERT_EQ(i.op, Opcode::CLEAR);

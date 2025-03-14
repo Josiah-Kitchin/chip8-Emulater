@@ -26,11 +26,15 @@ class CPU
     void set_register(std::size_t reg_num, uint8_t value);
     uint8_t get_register(std::size_t reg_num);
 
+    // Methods for execution
+    void display(const Instruction& instr);
+
 
     // Special registers
     uint16_t m_program_counter;
     uint16_t m_mem_location;
     uint8_t m_delay_timer;
+    uint8_t m_flag; 
 
     uint8_t m_sound_timer;
 

@@ -2,6 +2,7 @@
 
 #pragma once
 #include <array>
+#include "memory.hpp"
 
 class Display
 /* A black and white display, represented as a 64x32 matrix 
@@ -22,7 +23,10 @@ class Display
     constexpr static unsigned int vertical_pixels = 32; 
     constexpr static unsigned int horizontal_pixels = 64; 
 
-
   private:
     std::array<Color, vertical_pixels * horizontal_pixels> m_pixels;
+
 };
+
+
+

@@ -14,17 +14,17 @@ int main()
 { 
 
     /*------------- HARDWARE SETUP -----------*/
-    constexpr int instructions_per_sec = 700;
+    constexpr int instructions_per_sec = 5;
     Clock clock(instructions_per_sec); 
     Memory mem; 
-    load_instructions("empty_program", mem);
+    load_instructions("ibm.ch8", mem);
     Display display; 
     CPU cpu(mem, display);
     /*----------------------------------------*/
 
     /*---------------WINDOW SETUP-------------*/
     constexpr float cell_size = 10.0f; 
-    sf::RenderWindow window(sf::VideoMode(320, 640), "Chip8");
+    sf::RenderWindow window(sf::VideoMode(display.horizontal_pixels * 10, display.vertical_pixels * 10), "Chip8");
     /*----------------------------------------*/
 
     while (window.isOpen()) 

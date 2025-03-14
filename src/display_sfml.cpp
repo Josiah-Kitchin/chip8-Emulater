@@ -13,7 +13,7 @@ void display_sfml(sf::RenderWindow& window, const Display& display, float cell_s
         for(size_t x = 0; x < display.horizontal_pixels; x++)
         {
             sf::RectangleShape cell(sf::Vector2f(cell_size, cell_size));
-            Display::Color color = display.read_color(y, x);
+            Display::Color color = display.read_color(x, y);
             if (color == Display::Color::BLACK)
             {
                 cell.setFillColor(sf::Color::Black);
@@ -22,7 +22,7 @@ void display_sfml(sf::RenderWindow& window, const Display& display, float cell_s
             {
                 cell.setFillColor(sf::Color::White);
             }
-            cell.setPosition(y * cell_size, x * cell_size);
+            cell.setPosition(x * cell_size, y * cell_size);
             window.draw(cell);
         }
     }
