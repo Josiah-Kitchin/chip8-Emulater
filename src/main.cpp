@@ -1,13 +1,12 @@
 
 
-#include "clock.hpp"
 #include <iostream>
-#include "cpu.hpp"
-#include "display.hpp"
-#include "load_instructions.hpp"
 #include <fstream> 
 #include <SFML/Graphics.hpp>
-#include "display_sfml.hpp"
+
+#include "hardware/hardware.hpp"
+#include "media/sfml.hpp"
+#include "utils/load_instructions.hpp"
 
 void usage(int argc)
 {
@@ -25,18 +24,19 @@ int main(int argc, char** argv)
 
     /*------------- HARDWARE SETUP -----------*/
     constexpr int instructions_per_sec = 700;
-    Clock clock(instructions_per_sec); 
-    Memory mem; 
-    load_instructions(argv[1], mem);
-    Display display; 
-    CPU cpu(mem, display);
+    Hardware::Clock clock(instructions_per_sec); 
+
+    // Stores hardware components
+    Hardware::Bus bus; 
+    Utils::load_instructions(argv[1], bus.memory);
+    Hardware::CPU cpu(bus);
     /*----------------------------------------*/
 
     /*---------------WINDOW SETUP-------------*/
     constexpr float cell_size = 10.0f; 
-    sf::RenderWindow window(sf::VideoMode(display.horizontal_pixels * 10, display.vertical_pixels * 10), "Chip8");
+    sf::RenderWindow window(sf::VideoMode(bus.display.horizontal_pixels * 10, bus.display.vertical_pixels * 10), "Chip8");
     /*----------------------------------------*/
-       while (window.isOpen()) 
+    while (window.isOpen()) 
     {
 
         /* ---------- INSTRUCTION CYCLE -------- */
@@ -50,9 +50,12 @@ int main(int argc, char** argv)
         {
             if (event.type == sf::Event::Closed)
                 window.close();
+
+            if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased)
+                Media::handle_sfml_keypad(event, bus.keypad);
         }
 
-        display_to_sfml_window(window, display, cell_size);
+        Media::display_to_sfml_window(window, bus.display, cell_size);
 
         window.display(); 
         clock.wait_for_cycle(); 

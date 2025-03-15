@@ -1,6 +1,8 @@
 
-#include "display.hpp"
+#include "hardware/display.hpp"
 #include <iostream> 
+
+using namespace Hardware; 
 
 Display::Display() { std::fill(m_pixels.begin(), m_pixels.end(), Display::Color::BLACK); }
 

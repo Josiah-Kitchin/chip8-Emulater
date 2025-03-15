@@ -1,5 +1,7 @@
 
-#include "stack.hpp"
+#include "hardware/stack.hpp"
+
+using namespace Hardware; 
 
 void MemoryStack::push_address(uint16_t address)
 {

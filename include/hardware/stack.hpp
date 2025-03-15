@@ -4,6 +4,8 @@
 #include <stack> 
 #include <cinttypes> 
 
+namespace Hardware 
+{
 
 class MemoryStack 
 /* Stack implementation for the chip8
@@ -17,3 +19,5 @@ class MemoryStack
   private: 
     std::stack<uint16_t> m_mem_stack; 
 };
+
+}

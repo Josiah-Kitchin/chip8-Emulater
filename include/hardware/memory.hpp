@@ -4,6 +4,9 @@
 #include <array>
 #include <cstdint>
 
+namespace Hardware 
+{
+
 class Memory
 /* Global 4KB memory for the chip8 
  * Can be read and written to at an address a byte at a time 
@@ -25,3 +28,5 @@ class Memory
     // 4 KB of RAM
     std::array<uint8_t, SIZE> m_data;
 };
+
+}

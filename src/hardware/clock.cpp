@@ -1,10 +1,11 @@
 
 
-#include "clock.hpp"
+#include "hardware/clock.hpp"
 #include <chrono> 
 #include <thread> 
 
 using namespace std::chrono; 
+using Hardware::Clock; 
 
 Clock::Clock(int instructions_per_sec)
 {

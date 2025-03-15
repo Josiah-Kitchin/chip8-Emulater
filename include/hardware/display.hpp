@@ -3,7 +3,10 @@
 #pragma once
 #include <array>
 #include <cstdlib> 
-#include "memory.hpp"
+#include "hardware/memory.hpp"
+
+namespace Hardware 
+{
 
 class Display
 /* A black and white display, represented as a 64x32 matrix 
@@ -33,5 +36,5 @@ class Display
 
 };
 
-
+}
 

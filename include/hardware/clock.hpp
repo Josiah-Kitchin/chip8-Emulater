@@ -5,6 +5,8 @@
 #include <chrono> 
 
 
+namespace Hardware
+{
 
 class Clock
 /* Represents the clock for a cpu 
@@ -19,3 +21,4 @@ class Clock
     std::chrono::milliseconds m_instruction_duration; 
 };
 
+}

@@ -1,7 +1,12 @@
 
 
-#include "memory.hpp"
-#include "font.hpp"
+#include "hardware/memory.hpp"
+#include "data/font.hpp"
+
+#include "utils/utils.hpp"
+#include <iostream> 
+
+using namespace Hardware; 
 
 Memory::Memory()
 /* Initalizes memory with 4 KB, loads data that needs to be in memory
@@ -14,7 +19,10 @@ Memory::Memory()
         write(Memory::FONT_START_ADDRESS, byte);
 }
 
-uint8_t Memory::read(uint16_t address) { return m_data.at(address); }
+uint8_t Memory::read(uint16_t address) 
+{ 
+    return m_data.at(address); 
+}
 
 void Memory::write(uint16_t address, uint8_t value) { m_data.at(address) = value; }
 

@@ -34,6 +34,20 @@ TEST(cpu, decode_values)
     ASSERT_EQ(i.n, 0x3);
 }
 
+TEST(cpu, execute_clear)
+{
+    Memory mem; 
+    Display display; 
+    CPU cpu(mem, display);
+
+    display.write_color(10, 10, Display::Color::WHITE);
+
+    Instruction instr; 
+    instr.op = Opcode::CLEAR; 
+    cpu.execute(instr);
+    ASSERT_TRUE(display.is_black(10, 10));
+}
+
 
 TEST(cpu, decode_opcode)
 {

@@ -1,14 +1,15 @@
 
 
 #pragma once
-#include "instruction.hpp"
-#include "memory.hpp"
-#include "display.hpp"
+#include "data/instruction.hpp"
+#include "hardware/bus.hpp"
+
 #include <array>
 #include <cinttypes>
 #include <unordered_map> 
 #include <functional> 
 
+namespace Hardware {
 
 class CPU
 /* Incharge of fetching, decoding, and executing instructions
@@ -16,7 +17,7 @@ class CPU
  */
 {
   public:
-    CPU(Memory& mem, Display& display);
+    CPU(Bus& bus);
 
     // Instruction cycle methods
     uint16_t fetch();
@@ -31,8 +32,6 @@ class CPU
 
     // Registers
     std::array<uint8_t, 16> m_general_registers;
-    void set_register(std::size_t reg_num, uint8_t value);
-    uint8_t get_register(std::size_t reg_num);
 
     // Special registers
     uint16_t m_program_counter;
@@ -41,11 +40,10 @@ class CPU
     uint8_t m_flag; 
     uint8_t m_sound_timer;
 
-    // Hardware connections
-    Memory& m_memory;
-    Display& m_display; 
+    Bus& m_bus; 
 
     // Maps opcodes to cpu execute functions 
     const std::unordered_map<Opcode, std::function<void(const Instruction&)>> m_opcode_table; 
 };
 
+}

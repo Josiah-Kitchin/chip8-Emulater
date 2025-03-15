@@ -10,6 +10,8 @@ list(FILTER SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
+find_package(SFML 2.5 REQUIRED graphics window system)
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -22,7 +24,14 @@ add_executable(chip_test ${SOURCES} ${TEST_SOURCES})
 
 target_include_directories(chip_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-target_link_libraries(chip_test PRIVATE gtest gtest_main)
+target_link_libraries(
+        chip_test PRIVATE 
+        gtest 
+        gtest_main
+        sfml-graphics
+        sfml-window
+        sfml-system
+    )
 
 target_compile_options(chip_test PRIVATE -Wall -Wextra -g)
 

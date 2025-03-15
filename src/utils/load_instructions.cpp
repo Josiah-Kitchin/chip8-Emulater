@@ -1,7 +1,7 @@
 
-#include "load_instructions.hpp"
+#include "utils/load_instructions.hpp"
 
-void load_instructions(const std::string& file_name, Memory& mem)
+void Utils::load_instructions(const std::string& file_name, Hardware::Memory& mem)
 /* 
     Load the binary instructions of a file into memory
 */
@@ -9,7 +9,7 @@ void load_instructions(const std::string& file_name, Memory& mem)
     std::ifstream file(file_name, std::ios::binary);
     if (!file)
     {
-        std::cerr << "No instructions \"" << file_name << "\" found\n";
+        std::cerr << "No program \"" << file_name << "\" found\n";
         std::exit(EXIT_FAILURE);
     }
 
@@ -29,7 +29,7 @@ void load_instructions(const std::string& file_name, Memory& mem)
 }
 
 
-void write_instructions(const std::string& file_name, const std::vector<uint8_t>& bytes)
+void Utils::write_instructions(const std::string& file_name, const std::vector<uint8_t>& bytes)
 /*
     For debugging, write binary to a file 
 */
