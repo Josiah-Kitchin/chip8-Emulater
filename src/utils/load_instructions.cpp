@@ -13,10 +13,6 @@ void Utils::load_instructions(const std::string& file_name, Hardware::Memory& me
         std::exit(EXIT_FAILURE);
     }
 
-    file.seekg(0, std::ios::end);
-    std::streampos file_size = file.tellg(); 
-    file.seekg(0, std::ios::beg);
-
     uint16_t current_address = mem.PROGRAM_START_ADDRESS; 
 
     uint8_t byte; 
