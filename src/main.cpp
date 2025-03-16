@@ -32,6 +32,7 @@ int main(int argc, char** argv)
     Hardware::CPU cpu(bus);
     /*----------------------------------------*/
 
+
     /*---------------WINDOW SETUP-------------*/
     constexpr float cell_size = 10.0f; 
     sf::RenderWindow window(sf::VideoMode(bus.display.horizontal_pixels * 10, bus.display.vertical_pixels * 10), "Chip8");
@@ -56,6 +57,11 @@ int main(int argc, char** argv)
         }
 
         Media::display_to_sfml_window(window, bus.display, cell_size);
+
+        if (cpu.is_sound_playing())
+        {
+            // TODO 
+        }
 
         window.display(); 
         clock.wait_for_cycle(); 

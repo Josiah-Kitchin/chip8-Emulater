@@ -1,6 +1,7 @@
 
 
 #include "media/sfml.hpp"
+#include <iostream> 
 
 
 void Media::display_to_sfml_window(sf::RenderWindow& window, const Hardware::Display& display, float cell_size)
@@ -27,6 +28,21 @@ void Media::display_to_sfml_window(sf::RenderWindow& window, const Hardware::Dis
         }
     }
 }
+
+sf::Sound Media::get_sound_from_file(const std::string& file_name)
+{
+    sf::SoundBuffer buffer; 
+    if (!buffer.loadFromFile(file_name));
+    {
+        std::cout << "Failed to load sound file: " << file_name << std::endl; 
+        std::exit(EXIT_FAILURE);
+    }
+
+    sf::Sound sound; 
+    sound.setBuffer(buffer);
+    return sound; 
+}
+
 
 void Media::handle_sfml_keypad(const sf::Event& event, Hardware::Keypad& keypad)
 /*
