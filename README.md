@@ -2,6 +2,9 @@
 
 This project implements a CHIP-8 emulator in C++, using SFML for graphics. The emulator simulates the behavior of the classic CHIP-8 virtual machine, allowing you to run CHIP-8 games and programs.
 
+[![Chip8 Display](demo_image/chip8.png)]
+
+
 ## Features
 - **C++ implementation** of CHIP-8 emulator.
 - **SFML** used for rendering the display and handling input.
