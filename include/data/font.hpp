@@ -9,6 +9,8 @@ namespace Font
 {
 // Constant font data, to be loaded into memory 
 
+constexpr unsigned int NUM_BYTES = 5; 
+
 constexpr std::array<uint8_t, 80> DATA = {
     0xf0, 0x90, 0x90, 0x90, 0xf0, // '0'
     0x20, 0x60, 0x20, 0x20, 0x70, // '1'

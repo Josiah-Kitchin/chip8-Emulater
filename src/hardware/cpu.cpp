@@ -1,6 +1,7 @@
 
 #include "hardware/cpu.hpp"
 #include "utils/utils.hpp"
+#include "data/font.hpp"
 #include <iostream>
 #include <cstdlib> 
 
@@ -80,55 +81,56 @@ CPU::CPU(Bus &bus)
           { 
                 uint8_t x_value = m_general_registers[instr.x]; 
                 uint8_t y_value = m_general_registers[instr.y]; 
-                if (uint16_t(x_value) + uint16_t(y_value) > 255) //Set flag for overflow
-                    m_flag = 1; 
-                else
-                    m_flag = 0; 
                 m_general_registers[instr.x] += y_value; 
+
+                if ((uint16_t(x_value) + uint16_t(y_value)) > 255) //Set flag for overflow
+                    set_flag(1);
+                else
+                    set_flag(0);
           }},
 
           {Opcode::SUB, [this](const Instruction &instr) 
           { 
                 uint8_t x_value = m_general_registers[instr.x]; 
                 uint8_t y_value = m_general_registers[instr.y]; 
-                if (x_value > y_value) //Set flag for overflow
-                    m_flag = 1; 
-                else
-                    m_flag = 0; 
                 m_general_registers[instr.x] -= y_value; 
+                if (x_value >= y_value) //Set flag for overflow
+                    set_flag(1);
+                else
+                    set_flag(0);
           }},
 
           {Opcode::SUBN, [this](const Instruction &instr) 
           { 
                 uint8_t x_value = m_general_registers[instr.x]; 
                 uint8_t y_value = m_general_registers[instr.y]; 
-                if (y_value > x_value) //Set flag for overflow
-                    m_flag = 1; 
+                m_general_registers[instr.x] = (y_value - x_value); 
+                if (y_value >= x_value) //Set flag for overflow
+                    set_flag(1);
                 else
-                    m_flag = 0; 
-                m_general_registers[instr.y] -= x_value; 
+                    set_flag(0);
           }},
 
           {Opcode::SHR, [this](const Instruction &instr) 
           { 
                 uint8_t value = m_general_registers[instr.x];
                 uint8_t shifted_bit = value & 0b1;
-                if (shifted_bit)
-                    m_flag = 1; 
+                m_general_registers[instr.x] >>= 1; 
+                if (shifted_bit == 0b1)
+                    set_flag(1);
                 else
-                    m_flag = 0; 
-                m_general_registers[instr.x] >> 1; 
+                    set_flag(0);
           }},
 
-          {Opcode::SHR, [this](const Instruction &instr) 
+          {Opcode::SHL, [this](const Instruction &instr) 
           { 
                 uint8_t value = m_general_registers[instr.x];
                 uint8_t shifted_bit = value >> 7;
+                m_general_registers[instr.x] <<= 1; 
                 if (shifted_bit)
-                    m_flag = 1; 
+                    set_flag(1);
                 else
-                    m_flag = 0; 
-                m_general_registers[instr.x] << 1; 
+                    set_flag(0);
           }},
 
           {Opcode::JUMP_PLUS, [this](const Instruction &instr) { m_program_counter = instr.nnn + m_general_registers[0]; }},
@@ -157,11 +159,65 @@ CPU::CPU(Bus &bus)
           { 
                 uint8_t value = m_general_registers[instr.x];
                 if (uint16_t(value) + m_mem_location >= 0x1000)
-                    m_flag = 1;
+                    set_flag(1);
                 m_mem_location += value; 
           }},
 
+          {Opcode::SET_DELAY_TIMER, [this](const Instruction& instr) { m_delay_timer = m_general_registers[instr.x]; }},
 
+          {Opcode::SET_SOUND_TIMER, [this](const Instruction& instr) { m_sound_timer = m_general_registers[instr.x]; }},
+
+          {Opcode::MOVE_DELAY_TIMER, [this](const Instruction& instr) { m_general_registers[instr.x] = m_delay_timer; }},
+
+          {Opcode::WAIT_FOR_PRESS, [this](const Instruction& instr) 
+          { 
+                if (m_bus.keypad.any_pressed())
+                {
+                    uint8_t key_pressed = m_bus.keypad.get_key_pressed(); 
+                    m_general_registers[instr.x] = key_pressed; 
+                    return; 
+                } 
+                m_program_counter -= 2; 
+          }},
+
+          {Opcode::SET_I_SPRITE, [this](const Instruction& instr) 
+          {
+                uint8_t character = m_general_registers[instr.x] & 0xF;
+
+                uint16_t font_address = m_bus.memory.FONT_START_ADDRESS + (uint16_t(character) * Font::NUM_BYTES);
+                m_mem_location = font_address; 
+          }}, 
+
+          {Opcode::STORE_BCD, [this](const Instruction& instr)
+          {
+                uint8_t value = m_general_registers[instr.x];
+                uint8_t first_digit = value % 10; 
+                uint8_t second_digit = (value / 10) % 10; 
+                uint8_t third_digit = value / 100; 
+                m_bus.memory.write(m_mem_location, third_digit);
+                m_bus.memory.write(m_mem_location + 1, second_digit);
+                m_bus.memory.write(m_mem_location + 2, first_digit);
+          }},
+
+          {Opcode::STORE_REG_THROUGH, [this](const Instruction& instr)
+          {
+                uint8_t last_reg = instr.x; 
+                for (int i = 0; i <= instr.x; i++)
+                {
+                    uint8_t value = m_general_registers[i];
+                    m_bus.memory.write(m_mem_location + i, value);
+                }
+          }},
+
+          {Opcode::READ_REG_THROUGH, [this](const Instruction& instr)
+          {
+                uint8_t last_reg = instr.x; 
+                for (int i = 0; i <= instr.x; i++)
+                {
+                    uint8_t value = m_bus.memory.read(m_mem_location + i);
+                    m_general_registers[i] = value; 
+                }
+          }},
       }
 
 {
@@ -177,10 +233,13 @@ uint16_t CPU::fetch()
  * Terminates the program with success if the program counter goes past the memory size
  */
 {
+    update_timers();  // This needs to be done every instruction cycle 
+
     if (m_program_counter >= m_bus.memory.SIZE)
     {
         std::exit(EXIT_SUCCESS);
     }
+
     uint8_t byte1 = m_bus.memory.read(m_program_counter);
     uint8_t byte2 = m_bus.memory.read(m_program_counter + 1);
     m_program_counter += 2;
@@ -192,9 +251,27 @@ uint16_t CPU::fetch()
 
 void CPU::execute(Instruction instr)
 {
-    auto execute_function = m_opcode_table.at(instr.op);
-    execute_function(instr);
+    auto it = m_opcode_table.find(instr.op);
+    if (it == m_opcode_table.end())
+    {
+        std::cout << "Invalid opcode at execute" << std::endl; 
+        std::exit(EXIT_FAILURE);
+    }
+    it->second(instr);
 }
+
+bool CPU::is_sound_playing()
+{
+    return m_sound_timer > 0; 
+}
+
+void CPU::set_flag(uint8_t bit)
+// Register 15 is the flag register
+{
+    m_general_registers[15] = bit; 
+}
+
+
 
 /* ---------------------- EXECUTE METHODS ------------------------- */
 
@@ -219,7 +296,7 @@ void CPU::execute_draw_sprite(const Instruction &instr)
 {
     uint8_t sprite_height = instr.n;
 
-    m_flag = 0;
+    set_flag(0);
 
     uint8_t y_coord = m_general_registers[instr.y] % m_bus.display.vertical_pixels;
     uint8_t x_coord = m_general_registers[instr.x] % m_bus.display.horizontal_pixels;
@@ -247,7 +324,7 @@ void CPU::execute_draw_sprite(const Instruction &instr)
             {
                 m_bus.display.write_color(pixel_x_position, pixel_y_position,
                                           Display::Color::BLACK);
-                m_flag = 1;
+                set_flag(1);
             }
             else if (pixel_bit && m_bus.display.is_black(pixel_x_position, pixel_y_position))
             {
@@ -255,6 +332,31 @@ void CPU::execute_draw_sprite(const Instruction &instr)
                                           Display::Color::WHITE);
             }
         }
+    }
+}
+
+void CPU::update_timers()
+/*
+    Runs every instruction cycle, will calculate whether or not 
+    it needs to be decremented as it runs 60 times per second 
+*/
+{
+    using namespace std::chrono; 
+
+    auto current_time = steady_clock::now(); 
+    auto elapsed_time = duration_cast<milliseconds>(current_time - m_last_timer_update).count();
+
+    int time_interval = 16.6;
+    if (elapsed_time > time_interval)
+    {
+        m_last_timer_update = current_time; 
+
+        if (m_delay_timer > 0) 
+            m_delay_timer--; 
+
+        if (m_sound_timer > 0)
+            m_sound_timer--; 
+
     }
 }
 

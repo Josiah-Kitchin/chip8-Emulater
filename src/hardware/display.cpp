@@ -1,6 +1,5 @@
 
 #include "hardware/display.hpp"
-#include <iostream> 
 
 using namespace Hardware; 
 
@@ -8,7 +7,7 @@ Display::Display() { std::fill(m_pixels.begin(), m_pixels.end(), Display::Color:
 
 void Display::write_color(size_t x_pixel, size_t y_pixel, Display::Color color)
 {
-    m_pixels.at(x_pixel + horizontal_pixels * y_pixel) = color;
+    m_pixels[x_pixel + horizontal_pixels * y_pixel] = color;
 }
 
 Display::Color Display::read_color(size_t x_pixel, size_t y_pixel) const
