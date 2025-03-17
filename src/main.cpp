@@ -8,6 +8,7 @@
 #include "media/sfml.hpp"
 #include "utils/load_instructions.hpp"
 
+
 void usage(int argc)
 {
     if (argc != 2)
@@ -60,7 +61,7 @@ int main(int argc, char** argv)
 
         if (cpu.is_sound_playing())
         {
-            // TODO 
+            std::cout << '\a';
         }
 
         window.display(); 
